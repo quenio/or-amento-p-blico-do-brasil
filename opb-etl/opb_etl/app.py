@@ -83,19 +83,3 @@ class App:
 
     def _start_transaction(self):
         return self.driver.session(database="neo4j")
-
-    def find_person(self, person_name):
-        with self.driver.session(database="neo4j") as session:
-            result = session.execute_read(self._find_and_return_person, person_name)
-            for row in result:
-                print("Found person: {row}".format(row=row))
-
-    @staticmethod
-    def _find_and_return_person(tx, person_name):
-        query = (
-            "MATCH (p:Person) "
-            "WHERE p.name = $person_name "
-            "RETURN p.name AS name"
-        )
-        result = tx.run(query, person_name=person_name)
-        return [row["name"] for row in result]
