@@ -1,14 +1,18 @@
 [tool.poetry]
 name = "opb-etl"
 version = "0.1.0"
-description = ""
+description = "Orçamento Público do Brasil - Extract-Transformation-Load"
 authors = ["Quenio <quenio@hey.com>"]
 readme = "README.md"
 packages = [{include = "opb_etl"}]
 
 [tool.poetry.dependencies]
 python = "^3.11.1"
+neo4j = "5.3.0"
+python-dotenv = "0.21.0"
 
+[tool.poetry.scripts]
+opb-etl = "opb_etl.app:main"
 
 [build-system]
 requires = ["poetry-core"]
