@@ -21,6 +21,8 @@ def main():
     data_source_uri = getenv(DATA_SOURCE_URI)
     app = App(neo4j_uri, neo4j_username, neo4j_password, data_source_uri)
     try:
+        # app.delete_all()
+        # app.load_organizational_structure()
         app.find_nodes(label="ÓrgãoSuperior")
     finally:
         app.close()
@@ -51,9 +53,17 @@ class App:
             FROM '{self.data_source_uri}' AS line
             CALL {{
                 WITH line
+                WITH line,
+                     toInteger(toFloat(replace(line.`ORÇAMENTO INICIAL (R$)`, ',', '.')) * 100) as orçamentoInicial
                 MERGE (up:UnidadeOrçamentária {{name: line.`NOME UNIDADE ORÇAMENTÁRIA`}})
+                    ON CREATE SET up.orçamentoInicial = orçamentoInicial
+                    ON MATCH SET up.orçamentoInicial = up.orçamentoInicial + orçamentoInicial
                 MERGE (sub:ÓrgãoSubordinado {{name: line.`NOME ÓRGÃO SUBORDINADO`}})
+                    ON CREATE SET sub.orçamentoInicial = orçamentoInicial
+                    ON MATCH SET sub.orçamentoInicial = sub.orçamentoInicial + orçamentoInicial
                 MERGE (sup:ÓrgãoSuperior {{name: line.`NOME ÓRGÃO SUPERIOR`}})
+                    ON CREATE SET sup.orçamentoInicial = orçamentoInicial
+                    ON MATCH SET sup.orçamentoInicial = sup.orçamentoInicial + orçamentoInicial
                 MERGE (up)-[:SubordinadoAoÓrgão]->(sub)
                 MERGE (sub)-[:SubordinadoAoÓrgão]->(sup)
             }} IN TRANSACTIONS OF 500 ROWS
@@ -68,8 +78,9 @@ class App:
             RETURN *
             """
         )
-        for record in result:
-            print(record["n"]["name"])
+        items = map(lambda record: f"{record['n']['name']} = ${0 if record['n']['orçamentoInicial'] is None else record['n']['orçamentoInicial'] / 100.0:,.2f}", result)
+        for i in sorted(items):
+            print(i)
 
     def _execute_transaction(self, command):
         with self._start_transaction() as tx:
